@@ -5,18 +5,33 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/benjamin-larsen/goschemaipc/schema"
 )
 
 type Server struct {
-	SchemaPath string
+	Schema schema.Schema
 	Listener net.Listener
 	MessageOverflowPolicy MessageOverflowPolicy
 	MaxMessageSize uint32
+	Registry schema.MessageDescriptorRegistry
 }
 
 func (s *Server) Init() {
 	if s.MessageOverflowPolicy != MessageOverflowDiscard && s.MessageOverflowPolicy != MessageOverflowTerminate {
 		log.Fatal("Invalid Message Overflow Policy (must be Discard or Terminate)")
+	}
+
+	err := s.Registry.RegisterInternal()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = s.Registry.RegisterSchema(s.Schema)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
