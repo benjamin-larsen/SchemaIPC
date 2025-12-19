@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+
+	"github.com/benjamin-larsen/goschemaipc/schema"
 )
 
 type ProtocolHeader struct {
@@ -72,13 +74,33 @@ func (c *Conn) NextMessage() error {
 		}
 	}
 
+	descriptor, exists := c.server.Registry.Descriptors[header.MessageType]
+
+	if !exists {
+		// Treat this as protocol violation, a proper client should never attempt to encode a Message not present on the Schema-on-Wire
+		fmt.Printf("Unknown Message: %v\n", header.MessageType)
+		return ErrInvalidDescriptor
+	}
+
+	if descriptor.Message.Direction == schema.OutboundMessage {
+		// Treat this as protocol violation, a proper client should never attempt to encode a Outbound Message
+		fmt.Printf("Invalid Message Direction for %v\n", header.MessageType)
+		return ErrInvalidDirection
+	}
+
+	if !descriptor.Internal && descriptor.Handler == nil {
+		// Ignore User-defined Schemas that don't have handler
+		io.CopyN(io.Discard, c.conn, int64(header.PacketLength))
+		return nil
+	}
+
 	payload, err := c.readPaylod(header.PacketLength)
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Header: %+v\nPayload: %v\n", header, string(payload))
+	fmt.Printf("Header: %+v\nPayload: %v\nDescriptor: %+v\n", header, payload, descriptor)
 
 	return nil
 }
