@@ -9,6 +9,13 @@ const (
   MessageOverflowTerminate
 )
 
+type ConnState int
+
+const (
+	ConnWaitHello = iota
+	ConnEstablished
+)
+
 var ErrHeaderLength = errors.New("invalid header length (must be 8 bytes)")
 var ErrMsgLength = errors.New("exceeded message limit")
 

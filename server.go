@@ -81,6 +81,7 @@ func (s *Server) HandleConnection(netConn net.Conn) {
 	var c = Conn{
 		server: s,
 		conn: netConn,
+		state: ConnWaitHello,
 	}
 
 	for {

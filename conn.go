@@ -15,6 +15,7 @@ type ProtocolHeader struct {
 type Conn struct {
 	server *Server
 	conn net.Conn
+	state ConnState
 }
 
 var nullHeader = ProtocolHeader{}
