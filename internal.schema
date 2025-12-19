@@ -1,0 +1,15 @@
+inbound Hello {
+  int32 REQUIRED minVersion
+  int32 REQUIRED currVersion
+}
+
+outbound Hello {
+  int32 REQUIRED minVersion
+  int32 REQUIRED currVersion
+  long_binary REQUIRED schema
+  long_binary REQUIRED descriptorRegistry
+}
+
+duplex Ping {
+  int64 REQUIRED timestamp
+}
