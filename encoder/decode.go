@@ -160,9 +160,14 @@ func (r *Reader) Decode(res any) error {
 	// Setup reflection
 
 	vPtr := reflect.ValueOf(res)
+
+	if vPtr.Kind() != reflect.Ptr {
+		return ErrInvalidResultObject
+	}
+
 	v := vPtr.Elem()
 
-	if vPtr.Kind() != reflect.Ptr || v.Kind() != reflect.Struct {
+	if v.Kind() != reflect.Struct {
 		return ErrInvalidResultObject
 	}
 
