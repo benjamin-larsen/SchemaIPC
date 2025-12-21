@@ -10,7 +10,19 @@ type MessageDescriptor struct {
 	Message       SchemaMessage
 	OptionalCount uint32
 	Internal      bool
-	Handler       func() `json:"-"`
+	Handler       interface{} `json:"-"`
+}
+
+func (m MessageDescriptor) OptFlagLength() uint32 {
+	// divide by 8
+	count := m.OptionalCount >> 3
+
+	// Math.ceil-like
+	if (m.OptionalCount & 7) != 0 {
+		count++
+	}
+
+	return count
 }
 
 type MessageDescriptorRegistry struct {
