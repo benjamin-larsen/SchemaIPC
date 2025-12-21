@@ -2,11 +2,27 @@ package schemaipc
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 
 	"github.com/benjamin-larsen/goschemaipc/schema"
+)
+
+var ErrHeaderLength = errors.New("invalid header length (must be 8 bytes)")
+var ErrMsgLength = errors.New("exceeded message limit")
+
+var ErrMsgReadLength = errors.New("invalid payload length")
+
+var ErrInvalidDirection = errors.New("client attempted to send a outbound message")
+var ErrInvalidDescriptor = errors.New("client attempted to send a unknown message")
+
+type ConnState int
+
+const (
+	ConnWaitHello = iota
+	ConnEstablished
 )
 
 type ProtocolHeader struct {

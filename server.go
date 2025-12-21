@@ -9,6 +9,13 @@ import (
 	"github.com/benjamin-larsen/goschemaipc/schema"
 )
 
+type MessageOverflowPolicy int
+
+const (
+  MessageOverflowDiscard MessageOverflowPolicy = iota
+  MessageOverflowTerminate
+)
+
 type Server struct {
 	Schema schema.Schema
 	Listener net.Listener
