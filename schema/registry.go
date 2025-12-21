@@ -23,6 +23,7 @@ type MessageDescriptorRegistry struct {
 }
 
 var ErrAlreadyRegistered = errors.New("schema is already registered")
+var ErrInternalNotRegistered = errors.New("internal schema is not registered")
 
 func (r *MessageDescriptorRegistry) ensureDescriptors() {
 	if r.Descriptors == nil {
@@ -75,6 +76,10 @@ func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 		return ErrAlreadyRegistered
 	}
 
+	if !r.RegisteredInternal {
+		return ErrInternalNotRegistered
+	}
+
 	r.ensureDescriptors()
 
 	for _, message := range schema.Messages {
@@ -96,11 +101,13 @@ func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 		}
 	}
 
+	r.RegisteredUser = true
+
 	return nil
 }
 
 func (r *MessageDescriptorRegistry) RegisterInternal() error {
-	if r.RegisteredInternal {
+	if r.RegisteredInternal || r.RegisteredUser {
 		return ErrAlreadyRegistered
 	}
 
@@ -124,6 +131,8 @@ func (r *MessageDescriptorRegistry) RegisterInternal() error {
 			return err
 		}
 	}
+
+	r.RegisteredInternal = true
 
 	return nil
 }
