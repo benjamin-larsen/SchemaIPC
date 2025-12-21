@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 
@@ -199,8 +198,6 @@ func (r *Reader) Decode(descriptor schema.MessageDescriptor, res any) error {
 		}
 
 		r.decodeSingle(field, fMap, v)
-
-		log.Printf("Field: %+v\n", field)
 	}
 
 	return nil
@@ -226,7 +223,8 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 	switch field.Type {
 	case schema.TypeFixedBinary:
 		{
-			bytes, err := r.ReadBytes(field.Extra.(uint32))
+			len := field.Extra.(int)
+			bytes, err := r.ReadBytes(uint32(len))
 
 			if err != nil {
 				return err
