@@ -17,13 +17,15 @@ var ErrInvalidResultObject = errors.New("invalid result object (expected *Struct
 
 type Reader struct {
 	buffer       []byte
+	descriptor   schema.MessageDescriptor
 	pos          uint32
 	availableLen uint32
 }
 
-func NewReader(buffer []byte) Reader {
+func NewReader(buffer []byte, descriptor schema.MessageDescriptor) Reader {
 	return Reader{
 		buffer:       buffer,
+		descriptor: descriptor,
 		pos:          0,
 		availableLen: uint32(len(buffer)),
 	}
@@ -154,7 +156,7 @@ func computeFieldMap(t reflect.Type) (fieldMap, error) {
 	return cached.(fieldMap), nil
 }
 
-func (r *Reader) Decode(descriptor schema.MessageDescriptor, res any) error {
+func (r *Reader) Decode(res any) error {
 	// Setup reflection
 
 	vPtr := reflect.ValueOf(res)
@@ -173,7 +175,7 @@ func (r *Reader) Decode(descriptor schema.MessageDescriptor, res any) error {
 
 	// Start Decoding
 
-	optBytes := descriptor.OptFlagLength()
+	optBytes := r.descriptor.OptFlagLength()
 
 	optList, err := r.ReadBytes(optBytes)
 
@@ -183,7 +185,7 @@ func (r *Reader) Decode(descriptor schema.MessageDescriptor, res any) error {
 
 	var optCounter uint32 = 0
 
-	for _, field := range descriptor.Message.Fields {
+	for _, field := range r.descriptor.Message.Fields {
 		if field.Optional {
 			if optCounter >= optBytes {
 				return ErrOptionalCorrupted
@@ -197,7 +199,11 @@ func (r *Reader) Decode(descriptor schema.MessageDescriptor, res any) error {
 			}
 		}
 
-		r.decodeSingle(field, fMap, v)
+		err := r.decodeSingle(field, fMap, v)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

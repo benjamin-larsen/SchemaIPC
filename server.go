@@ -2,8 +2,10 @@ package schemaipc
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/benjamin-larsen/goschemaipc/schema"
@@ -40,6 +42,34 @@ func (s *Server) Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (s *Server) Register(signature string, handler schema.HandlerFunc) {
+	if !s.Registry.RegisteredUser {
+		panic("schema is not registered")
+	}
+
+	if !strings.HasPrefix(signature, "inbound ") {
+		panic("invalid direction (must be inbound)")
+	}
+
+	id, exists := s.Registry.UserSignatureMap[signature]
+
+	if !exists {
+		s := fmt.Sprintf("message (%s) doesn't exist", signature)
+		panic(s)
+	}
+
+	descriptor := s.Registry.Descriptors[id]
+
+	if descriptor.Handler != nil {
+		s := fmt.Sprintf("message (%s) is already registered", signature)
+		panic(s)
+	}
+
+	descriptor.Handler = handler
+
+	s.Registry.Descriptors[id] = descriptor
 }
 
 func (s *Server) ListenAndServe(network, address string) error {

@@ -5,12 +5,18 @@ import (
 	"fmt"
 )
 
+type Reader interface {
+	Decode(res any) error
+}
+
+type HandlerFunc func(r Reader) error
+
 type MessageDescriptor struct {
 	ID            uint32
 	Message       SchemaMessage
 	OptionalCount uint32
 	Internal      bool
-	Handler       interface{} `json:"-"`
+	Handler       HandlerFunc `json:"-"`
 }
 
 func (m MessageDescriptor) OptFlagLength() uint32 {

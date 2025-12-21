@@ -92,6 +92,7 @@ var sampleDesc = schema.MessageDescriptor{
 	Handler:       nil,
 }
 
+// [...Buffer.from("buffer")].map(x=>"0x"+x.toString(16).padStart(2,"0")).join(", ")
 var sampleBuf = []byte{
 	0x62, 0x75, 0x66, 0x66, 0x65, 0x72, // fixed
 	0x06, 0x00, 0x62, 0x75, 0x66, 0x66, 0x65, 0x72, // dynamic
@@ -160,8 +161,8 @@ func validateRes(res sampleStruct) error {
 func TestA(t *testing.T) {
 	var res sampleStruct
 
-	reader := NewReader(sampleBuf)
-	err := reader.Decode(sampleDesc, &res)
+	reader := NewReader(sampleBuf, sampleDesc)
+	err := reader.Decode(&res)
 
 	if err != nil {
 		t.Error(err)
@@ -200,8 +201,8 @@ func BenchmarkDecodeA(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var res sampleStruct
 
-		reader := NewReader(sampleBuf)
-		err := reader.Decode(sampleDesc, &res)
+		reader := NewReader(sampleBuf, sampleDesc)
+		err := reader.Decode(&res)
 
 		if err != nil {
 			b.Error(err)

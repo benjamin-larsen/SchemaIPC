@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/benjamin-larsen/goschemaipc/encoder"
 	"github.com/benjamin-larsen/goschemaipc/schema"
 )
 
@@ -15,7 +16,7 @@ var ErrMsgLength = errors.New("exceeded message limit")
 
 var ErrMsgReadLength = errors.New("invalid payload length")
 
-var ErrInvalidDirection = errors.New("client attempted to send a outbound message")
+var ErrSentInvalidDirection = errors.New("client attempted to send a outbound message")
 var ErrInvalidDescriptor = errors.New("client attempted to send a unknown message")
 
 type ConnState int
@@ -101,7 +102,13 @@ func (c *Conn) NextMessage() error {
 	if descriptor.Message.Direction == schema.OutboundMessage {
 		// Treat this as protocol violation, a proper client should never attempt to encode a Outbound Message
 		fmt.Printf("Invalid Message Direction for %v\n", header.MessageType)
-		return ErrInvalidDirection
+		return ErrSentInvalidDirection
+	}
+
+	if !descriptor.Internal && c.state == ConnWaitHello {
+		// Treat this as protocol violation, a proper client should never send a User-specified message before Connection is Established
+		fmt.Printf("Sent user-specified message outside of Established Connection: %v\n", header.MessageType)
+		return ErrInvalidDescriptor
 	}
 
 	if !descriptor.Internal && descriptor.Handler == nil {
@@ -116,7 +123,17 @@ func (c *Conn) NextMessage() error {
 		return err
 	}
 
-	fmt.Printf("Header: %+v\nPayload: %v\nDescriptor: %+v\n", header, payload, descriptor)
+	reader := encoder.NewReader(payload, descriptor)
+
+	if descriptor.Internal {
+
+	} else {
+		err = descriptor.Handler(&reader)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 
 	return nil
 }
