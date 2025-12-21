@@ -74,7 +74,7 @@ func (c *Conn) readPaylod(len uint32) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *Conn) NextMessage() error {
+func (c *Conn) nextMessage() error {
 	header, err := c.readHeader()
 
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *Conn) NextMessage() error {
 		return ErrInvalidDescriptor
 	}
 
-	if !descriptor.Internal && descriptor.Handler == nil {
+	if descriptor.Handler == nil {
 		// Ignore User-defined Schemas that don't have handler
 		io.CopyN(io.Discard, c.conn, int64(header.PacketLength))
 		return nil
@@ -125,14 +125,10 @@ func (c *Conn) NextMessage() error {
 
 	reader := encoder.NewReader(payload, descriptor)
 
-	if descriptor.Internal {
+	err = descriptor.Handler(&reader, c)
 
-	} else {
-		err = descriptor.Handler(&reader)
-
-		if err != nil {
-			fmt.Println(err)
-		}
+	if err != nil {
+		return err
 	}
 
 	return nil

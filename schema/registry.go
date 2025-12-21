@@ -5,11 +5,13 @@ import (
 	"fmt"
 )
 
+type Conn interface {}
+
 type Reader interface {
 	Decode(res any) error
 }
 
-type HandlerFunc func(r Reader) error
+type HandlerFunc func(r Reader, c Conn) error
 
 type MessageDescriptor struct {
 	ID            uint32

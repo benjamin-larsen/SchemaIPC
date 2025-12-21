@@ -72,6 +72,34 @@ func (s *Server) Register(signature string, handler schema.HandlerFunc) {
 	s.Registry.Descriptors[id] = descriptor
 }
 
+func (s *Server) registerInternal(signature string, handler schema.HandlerFunc) {
+	if !s.Registry.RegisteredInternal {
+		panic("internal schema is not registered")
+	}
+
+	if !strings.HasPrefix(signature, "inbound ") {
+		panic("invalid direction (must be inbound)")
+	}
+
+	id, exists := s.Registry.InternalSignatureMap[signature]
+
+	if !exists {
+		s := fmt.Sprintf("message (%s) doesn't exist", signature)
+		panic(s)
+	}
+
+	descriptor := s.Registry.Descriptors[id]
+
+	if descriptor.Handler != nil {
+		s := fmt.Sprintf("message (%s) is already registered", signature)
+		panic(s)
+	}
+
+	descriptor.Handler = handler
+
+	s.Registry.Descriptors[id] = descriptor
+}
+
 func (s *Server) ListenAndServe(network, address string) error {
 	listener, err := net.Listen(network, address)
 
@@ -112,7 +140,6 @@ func (s *Server) ListenAndServe(network, address string) error {
 }
 
 func (s *Server) HandleConnection(netConn net.Conn) {
-	log.Print("Socket Open")
 	defer netConn.Close()
 
 	var c = Conn{
@@ -122,12 +149,10 @@ func (s *Server) HandleConnection(netConn net.Conn) {
 	}
 
 	for {
-		err := c.NextMessage()
+		err := c.nextMessage()
 
 		if err != nil {
 			break
 		}
 	}
-
-	log.Print("Socket Close")
 }
