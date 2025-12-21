@@ -57,6 +57,16 @@ func (r *Reader) ReadUInt16() (uint16, error) {
 	return binary.LittleEndian.Uint16(bytes), nil
 }
 
+func (r *Reader) ReadInt16() (int16, error) {
+	bytes, err := r.ReadBytes(2)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int16(binary.LittleEndian.Uint16(bytes)), nil
+}
+
 func (r *Reader) ReadUInt32() (uint32, error) {
 	bytes, err := r.ReadBytes(4)
 
@@ -75,6 +85,26 @@ func (r *Reader) ReadInt32() (int32, error) {
 	}
 
 	return int32(binary.LittleEndian.Uint32(bytes)), nil
+}
+
+func (r *Reader) ReadUInt64() (uint64, error) {
+	bytes, err := r.ReadBytes(8)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.LittleEndian.Uint64(bytes), nil
+}
+
+func (r *Reader) ReadInt64() (int64, error) {
+	bytes, err := r.ReadBytes(8)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(binary.LittleEndian.Uint64(bytes)), nil
 }
 
 func GetOpt(opt uint32, optList []byte) bool {
@@ -188,10 +218,29 @@ TypeUInt16
 TypeInt16
 */
 
+// TODO: check types
+// Check IsValid and CanSet
 func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflect.Value) error {
 	fIdx, exists := fMap[field.Name]
 
 	switch field.Type {
+	case schema.TypeFixedBinary:
+		{
+			bytes, err := r.ReadBytes(field.Extra.(uint32))
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetBytes(bytes)
+
+			break
+		}
 	case schema.TypeDynamicBinary:
 		{
 			len, err := r.ReadUInt16()
@@ -212,8 +261,6 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 
 			f := v.Field(fIdx)
 			f.SetBytes(bytes)
-
-			log.Printf("%s: %+v\n", field.Name, bytes)
 
 			break
 		}
@@ -238,7 +285,56 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 			f := v.Field(fIdx)
 			f.SetBytes(bytes)
 
-			log.Printf("%s: %+v\n", field.Name, bytes)
+			break
+		}
+	case schema.TypeUInt64:
+		{
+			num, err := r.ReadUInt64()
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetUint(num)
+
+			break
+		}
+	case schema.TypeInt64:
+		{
+			num, err := r.ReadInt64()
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetInt(num)
+
+			break
+		}
+	case schema.TypeUInt32:
+		{
+			num, err := r.ReadUInt32()
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetUint(uint64(num))
 
 			break
 		}
@@ -257,7 +353,40 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 			f := v.Field(fIdx)
 			f.SetInt(int64(num))
 
-			log.Printf("%s: %v\n", field.Name, num)
+			break
+		}
+	case schema.TypeUInt16:
+		{
+			num, err := r.ReadUInt16()
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetUint(uint64(num))
+
+			break
+		}
+	case schema.TypeInt16:
+		{
+			num, err := r.ReadInt16()
+
+			if err != nil {
+				return err
+			}
+
+			if !exists {
+				return nil
+			}
+
+			f := v.Field(fIdx)
+			f.SetInt(int64(num))
+
 			break
 		}
 	default:

@@ -24,7 +24,7 @@ func (d MessageDirection) ToString() string {
 type MessageField struct {
 	Name     string
 	Type     FieldType
-	Length   uint32
+	Extra    any
 	Optional bool
 }
 
@@ -61,13 +61,13 @@ var InternalSchema = Schema{
 				{
 					Name:     "minVersion",
 					Type:     TypeInt32,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 				{
 					Name:     "currVersion",
 					Type:     TypeInt32,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 			},
@@ -80,25 +80,25 @@ var InternalSchema = Schema{
 				{
 					Name:     "minVersion",
 					Type:     TypeInt32,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 				{
 					Name:     "currVersion",
 					Type:     TypeInt32,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 				{
 					Name:     "schema",
 					Type:     TypeLongBinary,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 				{
 					Name:     "descriptorRegistry",
 					Type:     TypeLongBinary,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 			},
@@ -111,7 +111,7 @@ var InternalSchema = Schema{
 				{
 					Name:     "timestamp",
 					Type:     TypeInt64,
-					Length:   0,
+					Extra:    nil,
 					Optional: false,
 				},
 			},
