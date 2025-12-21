@@ -21,20 +21,6 @@ func (d MessageDirection) ToString() string {
 	}
 }
 
-type FieldType int
-
-const (
-	TypeFixedBinary FieldType = iota
-	TypeDynamicBinary
-	TypeLongBinary
-	TypeUInt64
-	TypeInt64
-	TypeUInt32
-	TypeInt32
-	TypeUInt16
-	TypeInt16
-)
-
 type MessageField struct {
 	Name     string
 	Type     FieldType
