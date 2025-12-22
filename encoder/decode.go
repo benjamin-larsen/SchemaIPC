@@ -13,7 +13,8 @@ import (
 var ErrOutOfBounds = errors.New("out of bounds")
 var ErrOptionalCorrupted = errors.New("optional count is corrupted")
 var ErrTypeCorrupted = errors.New("message type is corrupted")
-var ErrInvalidResultObject = errors.New("invalid result object (expected *Struct)")
+var ErrInvalidResultObject = errors.New("invalid result object (expected *struct)")
+var ErrInvalidResultPointer = errors.New("invalid result poinetr (expected struct)")
 
 type Reader struct {
 	buffer       []byte
@@ -166,10 +167,12 @@ func (r *Reader) Decode(res any) error {
 		return ErrInvalidResultObject
 	}
 
-	v := vPtr.Elem()
+	return r.decodeStruct(r.descriptor, vPtr.Elem())
+}
 
+func (r *Reader) decodeStruct(descriptor schema.MessageDescriptor, v reflect.Value) error {
 	if v.Kind() != reflect.Struct {
-		return ErrInvalidResultObject
+		return ErrInvalidResultPointer
 	}
 
 	t := v.Type()
@@ -181,7 +184,7 @@ func (r *Reader) Decode(res any) error {
 
 	// Start Decoding
 
-	optBytes := r.descriptor.OptFlagLength()
+	optBytes := descriptor.OptFlagLength()
 
 	optList, err := r.ReadBytes(optBytes)
 
@@ -191,7 +194,7 @@ func (r *Reader) Decode(res any) error {
 
 	var optCounter uint32 = 0
 
-	for _, field := range r.descriptor.Message.Fields {
+	for _, field := range descriptor.Message.Fields {
 		if field.Optional {
 			if optCounter >= optBytes {
 				return ErrOptionalCorrupted
@@ -205,7 +208,15 @@ func (r *Reader) Decode(res any) error {
 			}
 		}
 
-		err := r.decodeSingle(field, fMap, v)
+		fIdx, exists := fMap[field.Name]
+		var fPtr *reflect.Value = nil
+
+		if exists {
+			f := v.Field(fIdx)
+			fPtr = &f
+		}
+
+		err := r.decodeSingle(field, fPtr)
 
 		if err != nil {
 			return err
@@ -229,9 +240,7 @@ TypeInt16
 
 // TODO: check types
 // Check IsValid and CanSet
-func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflect.Value) error {
-	fIdx, exists := fMap[field.Name]
-
+func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error {
 	switch field.Type {
 	case schema.TypeFixedBinary:
 		{
@@ -242,11 +251,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetBytes(bytes)
 
 			break
@@ -265,11 +273,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetBytes(bytes)
 
 			break
@@ -288,11 +295,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetBytes(bytes)
 
 			break
@@ -305,11 +311,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetUint(num)
 
 			break
@@ -322,11 +327,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetInt(num)
 
 			break
@@ -339,11 +343,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetUint(uint64(num))
 
 			break
@@ -356,11 +359,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetInt(int64(num))
 
 			break
@@ -373,11 +375,10 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetUint(uint64(num))
 
 			break
@@ -390,12 +391,90 @@ func (r *Reader) decodeSingle(field schema.MessageField, fMap fieldMap, v reflec
 				return err
 			}
 
-			if !exists {
+			if f == nil {
 				return nil
 			}
 
-			f := v.Field(fIdx)
 			f.SetInt(int64(num))
+
+			break
+		}
+	case schema.TypeObject:
+		{
+			subFields := field.Extra.(schema.MessageDescriptor)
+
+			if f == nil {
+				// need to skip bytes here
+				return nil
+			}
+
+			err := r.decodeStruct(subFields, *f)
+
+			if err != nil {
+				return err
+			}
+
+			break
+		}
+	case schema.TypeArray:
+		{
+			lenU32, err := r.ReadUInt16()
+
+			if err != nil {
+				return err
+			}
+
+			len := int(lenU32)
+
+			if f == nil {
+				// need to skip bytes here
+				return nil
+			}
+
+			switch e := field.Extra.(type) {
+			case schema.MessageField: {
+				itemSize := e.Type.GetFixedSize(e.Extra) * uint32(len)
+
+				if itemSize > (r.len - r.pos) {
+					return ErrOutOfBounds
+				}
+
+				slice := reflect.MakeSlice(f.Type(), len, len)
+
+				f.Set(slice)
+
+				for i := 0; i < len; i++ {
+					item := slice.Index(i)
+
+					err := r.decodeSingle(e, &item)
+
+					if err != nil {
+						return err
+					}
+				}
+			}
+			case schema.MessageDescriptor: {
+				itemSize := e.GetFixedSize() * uint32(len)
+
+				if itemSize > (r.len - r.pos) {
+					return ErrOutOfBounds
+				}
+
+				slice := reflect.MakeSlice(f.Type(), len, len)
+
+				f.Set(slice)
+
+				for i := 0; i < len; i++ {
+					item := slice.Index(i)
+
+					err := r.decodeStruct(e, item)
+
+					if err != nil {
+						return err
+					}
+				}
+			}
+			}
 
 			break
 		}

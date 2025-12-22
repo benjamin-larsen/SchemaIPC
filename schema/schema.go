@@ -90,14 +90,87 @@ var InternalSchema = Schema{
 					Optional: false,
 				},
 				{
-					Name:     "schema",
-					Type:     TypeLongBinary,
-					Extra:    nil,
+					Name: "schema",
+					Type: TypeArray,
+					Extra: SchemaMessage{
+						Fields: []MessageField{
+							{
+								Name:     "id",
+								Type:     TypeUInt32,
+								Extra:    nil,
+								Optional: false,
+							},
+							{
+								Name:     "internal",
+								Type:     TypeUInt16,
+								Extra:    nil,
+								Optional: false,
+							},
+							{
+								Name:     "direction",
+								Type:     TypeUInt16,
+								Extra:    nil,
+								Optional: false,
+							},
+							{
+								Name:     "name",
+								Type:     TypeDynamicBinary,
+								Extra:    nil,
+								Optional: false,
+							},
+							{
+								Name: "fields",
+								Type: TypeArray,
+								Extra: SchemaMessage{
+									Fields: []MessageField{
+										{
+											Name:     "name",
+											Type:     TypeDynamicBinary,
+											Extra:    nil,
+											Optional: false,
+										},
+										{
+											Name:     "type",
+											Type:     TypeUInt16,
+											Extra:    nil,
+											Optional: false,
+										},
+										{
+											Name:     "extra",
+											Type:     TypeLongBinary,
+											Extra:    nil,
+											Optional: false,
+										},
+										{
+											Name:     "optional",
+											Type:     TypeUInt16,
+											Extra:    nil,
+											Optional: false,
+										},
+									},
+								},
+								Optional: false,
+							},
+						},
+					},
 					Optional: false,
 				},
 				{
 					Name:     "descriptorRegistry",
 					Type:     TypeLongBinary,
+					Extra:    nil,
+					Optional: false,
+				},
+			},
+		},
+
+		{
+			Direction: OutboundMessage,
+			Name:      "ProtocolError",
+			Fields: []MessageField{
+				{
+					Name:     "message",
+					Type:     TypeDynamicBinary,
 					Extra:    nil,
 					Optional: false,
 				},

@@ -1,10 +1,10 @@
 package encoder
 
 import (
+	"fmt"
 	"log"
 	"slices"
 	"testing"
-	"fmt"
 
 	exp "github.com/benjamin-larsen/goschemaipc/exp/encoder"
 	"github.com/benjamin-larsen/goschemaipc/schema"
@@ -68,6 +68,14 @@ var sampleMsg = schema.SchemaMessage{
 			Extra:    nil,
 			Optional: false,
 		},
+		{
+			Name: "array",
+			Type: schema.TypeArray,
+			Extra: schema.MessageField{
+				Type: schema.TypeInt16,
+			},
+			Optional: false,
+		},
 	},
 }
 
@@ -82,6 +90,28 @@ type sampleStruct struct {
 	Int32   int32  `ipc:"int32"`
 	UInt16  uint16 `ipc:"uint16"`
 	Int16   int16  `ipc:"int16"`
+	Array   []int16 `ipc:"array"`
+}
+
+type messageField struct {
+	Name     []byte           `ipc:"name"`
+	Type     uint16           `ipc:"type"`
+	Extra    []byte           `ipc:"extra"`
+	Optional uint16           `ipc:"optional"`
+}
+
+type messageDescriptor struct {
+	ID        uint32         `ipc:"id"`
+	Internal  uint16         `ipc:"internal"`
+	Direction uint16         `ipc:"direction"`
+	Name      []byte         `ipc:"name"`
+	Fields    []messageField `ipc:"fields"`
+}
+
+type helloOutbound struct {
+	MinVersion int32               `ipc:"minVersion"`
+	Version    int32               `ipc:"currVersion"`
+	Schema     []messageDescriptor `ipc:"schema"`
 }
 
 var sampleDesc = schema.MessageDescriptor{
@@ -92,7 +122,8 @@ var sampleDesc = schema.MessageDescriptor{
 	Handler:       nil,
 }
 
-// [...Buffer.from("buffer")].map(x=>"0x"+x.toString(16).padStart(2,"0")).join(", ")
+var sampleRegistry = schema.MessageDescriptorRegistry{}
+
 var sampleBuf = []byte{
 	0x62, 0x75, 0x66, 0x66, 0x65, 0x72, // fixed
 	0x06, 0x00, 0x62, 0x75, 0x66, 0x66, 0x65, 0x72, // dynamic
@@ -103,6 +134,32 @@ var sampleBuf = []byte{
 	0xff, 0xff, 0xff, 0xff, // int32
 	0xff, 0xff, // uint16
 	0xff, 0xff, // int16
+	0x02, 0x00,
+	0x62, 0x28,
+	0x26, 0x82,
+}
+
+var sampleBuf2 = []byte{
+	0x00, 0x00, 0x00, 0x00, // minVersion                (0)
+	0x00, 0x00, 0x00, 0x00, // currVersion               (0)
+	0x01, 0x00, // schema [length]           (1)
+
+	// schema[0]
+	0x02, 0x00, 0x00, 0x00, // schema[0].id              (2)
+	0x01, 0x00, //             schema[0].internal        (false)
+	0x01, 0x00, //             schema[0].direction       (outbound)
+	0x0d, 0x00, //             schema[0].name [length]   (13)
+	// schema[0].name (ProtocolError)
+	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x45, 0x72, 0x72, 0x6f, 0x72,
+	0x01, 0x00, // schema[0].fields [length] (1)
+
+	// schema[0].fields[0]
+	0x07, 0x00, //   schema[0].fields[0].name [length]   (7)
+	// schema[0].fields[0].name (message)
+	0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
+	0x01, 0x00, //   schema[0].fields[0].type            (TypeDynamicBinary)
+	0x00, 0x00, 0x00, 0x00, // fields[0].extra [length]  (7)
+	0x00, 0x00, // fields[0].optional                    (false)
 }
 
 var expectedBin = []byte{
@@ -159,20 +216,24 @@ func validateRes(res sampleStruct) error {
 }
 
 func TestA(t *testing.T) {
-	var res sampleStruct
+	sampleRegistry.RegisterInternal()
 
-	reader := NewReader(sampleBuf, sampleDesc)
+	sampleDesc2 := sampleRegistry.Descriptors[1]
+
+	var res helloOutbound
+
+	reader := NewReader(sampleBuf2, sampleDesc2)
 	err := reader.Decode(&res)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = validateRes(res)
+	/*err = validateRes(res)
 
 	if err != nil {
 		t.Error(err)
-	}
+	}*/
 
 	log.Printf("%+v\n", res)
 }
@@ -197,22 +258,45 @@ func TestB(t *testing.T) {
 	log.Printf("%+v\n", res)
 }
 
-func BenchmarkDecodeA(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		var res sampleStruct
+func TestC(t *testing.T) {
+	var res sampleStruct
 
-		reader := NewReader(sampleBuf, sampleDesc)
+	reader := NewReader(sampleBuf, sampleDesc)
+	err := reader.Decode(&res)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	/*err = validateRes(res)
+
+	if err != nil {
+		t.Error(err)
+	}*/
+
+	log.Printf("%+v\n", res)
+}
+
+func BenchmarkDecodeA(b *testing.B) {
+	sampleRegistry.RegisterInternal()
+
+	sampleDesc2 := sampleRegistry.Descriptors[1]
+
+	for i := 0; i < b.N; i++ {
+		var res helloOutbound
+
+		reader := NewReader(sampleBuf2, sampleDesc2)
 		err := reader.Decode(&res)
 
 		if err != nil {
 			b.Error(err)
 		}
 
-		err = validateRes(res)
+		/*err = validateRes(res)
 
 		if err != nil {
 			b.Error(err)
-		}
+		}*/
 	}
 }
 

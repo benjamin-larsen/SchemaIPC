@@ -8,6 +8,7 @@ import (
 type Conn interface {}
 
 type Reader interface {
+	// constraint: decode does not work concurrently
 	Decode(res any) error
 }
 
@@ -31,6 +32,16 @@ func (m MessageDescriptor) OptFlagLength() uint32 {
 	}
 
 	return count
+}
+
+func (m MessageDescriptor) GetFixedSize() uint32 {
+	var accum uint32 = m.OptFlagLength()
+
+	for _, field := range m.Message.Fields {
+		accum += field.Type.GetFixedSize(field.Extra)
+	}
+
+	return accum
 }
 
 type MessageDescriptorRegistry struct {
@@ -91,6 +102,33 @@ func handleSignatures(signatureMap map[string]uint32, message SchemaMessage, id 
 	return nil
 }
 
+func resolveMessageFields(message *SchemaMessage) {
+	for idx, field := range message.Fields {
+		if field.Type == TypeObject || field.Type == TypeArray {
+			subMessage, ok := field.Extra.(SchemaMessage)
+
+			if !ok {
+				if field.Type == TypeObject {
+					panic("object type must contain SchemaMessage")
+				}
+				continue
+			}
+
+			resolveMessageFields(&subMessage)
+
+			field.Extra = MessageDescriptor{
+				ID:            0,
+				Message:       subMessage,
+				OptionalCount: subMessage.CountOptional(),
+				Internal:      false,
+				Handler:       nil,
+			}
+
+			message.Fields[idx] = field
+		}
+	}
+}
+
 func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 	if r.RegisteredUser {
 		return ErrAlreadyRegistered
@@ -105,6 +143,8 @@ func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 	for _, message := range schema.Messages {
 		id := r.idCounter
 		r.idCounter++
+
+		resolveMessageFields(&message)
 
 		r.Descriptors[id] = MessageDescriptor{
 			ID:            id,
@@ -136,6 +176,8 @@ func (r *MessageDescriptorRegistry) RegisterInternal() error {
 	for _, message := range InternalSchema.Messages {
 		id := r.idCounter
 		r.idCounter++
+
+		resolveMessageFields(&message)
 
 		r.Descriptors[id] = MessageDescriptor{
 			ID:            id,
