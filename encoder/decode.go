@@ -19,7 +19,7 @@ type Reader struct {
 	buffer       []byte
 	descriptor   schema.MessageDescriptor
 	pos          uint32
-	availableLen uint32
+	len          uint32
 }
 
 func NewReader(buffer []byte, descriptor schema.MessageDescriptor) Reader {
@@ -27,12 +27,12 @@ func NewReader(buffer []byte, descriptor schema.MessageDescriptor) Reader {
 		buffer:       buffer,
 		descriptor: descriptor,
 		pos:          0,
-		availableLen: uint32(len(buffer)),
+		len: uint32(len(buffer)),
 	}
 }
 
 func (r *Reader) ReadBytes(n uint32) ([]byte, error) {
-	if n > r.availableLen {
+	if n > (r.len - r.pos) {
 		return nil, ErrOutOfBounds
 	}
 
@@ -43,7 +43,6 @@ func (r *Reader) ReadBytes(n uint32) ([]byte, error) {
 	}
 
 	r.pos += n
-	r.availableLen -= n
 
 	return result, nil
 }
@@ -157,6 +156,8 @@ func computeFieldMap(t reflect.Type) (fieldMap, error) {
 }
 
 func (r *Reader) Decode(res any) error {
+	r.pos = 0
+
 	// Setup reflection
 
 	vPtr := reflect.ValueOf(res)
