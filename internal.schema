@@ -3,11 +3,31 @@ inbound Hello {
   int32 REQUIRED currVersion
 }
 
+// uint16 as protocol currently doesnt have bool
+object messageField {
+  binary REQURIED name
+  uint16 REQUIRED type
+  long_binary REQUIRED extra
+  uint16 REQUIRED optional
+}
+
+// uint16 as protocol currently doesnt have bool
+object messageDescriptor {
+  uint32 REQUIRED id
+  uint16 REQUIRED internal
+  uint16 REQUIRED direction
+  binary REQURIED name
+  array(messageField) REQUIRED fields
+}
+
 outbound Hello {
   int32 REQUIRED minVersion
   int32 REQUIRED currVersion
-  long_binary REQUIRED schema
-  long_binary REQUIRED descriptorRegistry
+  array(messageDescriptor) REQUIRED schema
+}
+
+outbound ProtocolError {
+  binary REQUIRED message
 }
 
 duplex Ping {

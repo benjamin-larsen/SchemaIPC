@@ -6,6 +6,7 @@ const (
 	InboundMessage MessageDirection = iota
 	OutboundMessage
 	DuplexMessage
+	ObjectMessage
 )
 
 func (d MessageDirection) ToString() string {
@@ -16,6 +17,8 @@ func (d MessageDirection) ToString() string {
 		return "outbound"
 	case DuplexMessage:
 		return "duplex"
+	case ObjectMessage:
+		return "object"
 	default:
 		return ""
 	}
@@ -153,12 +156,6 @@ var InternalSchema = Schema{
 							},
 						},
 					},
-					Optional: false,
-				},
-				{
-					Name:     "descriptorRegistry",
-					Type:     TypeLongBinary,
-					Extra:    nil,
 					Optional: false,
 				},
 			},
