@@ -7,6 +7,7 @@ import (
 	"log"
 	"reflect"
 	"slices"
+	"unsafe"
 
 	"github.com/benjamin-larsen/goschemaipc/schema"
 )
@@ -145,6 +146,34 @@ func (w *Writer) encodeStruct(descriptor schema.MessageDescriptor, v reflect.Val
 	return nil
 }
 
+func getBytes(v reflect.Value) ([]byte, error) {
+	addr := unsafe.Pointer(v.UnsafeAddr())
+	kind := v.Kind()
+
+	switch kind {
+	case reflect.Array:
+		{
+			arrLen := v.Len()
+
+			return ([]byte)(unsafe.Slice((*byte)(addr), arrLen)), nil
+		}
+	case reflect.Slice:
+		{
+			// check that elem is byte too
+			return *(*[]byte)(addr), nil
+		}
+	case reflect.String:
+		{
+			str := *(*string)(addr)
+			return []byte(str), nil
+		}
+	default:
+		{
+			return nil, ErrInvalidByteKind
+		}
+	}
+}
+
 func (w *Writer) encodeSingle(field schema.MessageField, f reflect.Value) error {
 	// Future Note: use a default value instead of failing
 	if !f.IsValid() {
@@ -155,7 +184,11 @@ func (w *Writer) encodeSingle(field schema.MessageField, f reflect.Value) error 
 	case schema.TypeFixedBinary:
 		{
 			expectedLen := field.Extra.(int)
-			bytes := f.Bytes()
+			bytes, err := getBytes(f)
+
+			if err != nil {
+				return err
+			}
 
 			if len(bytes) != expectedLen {
 				return ErrWrongLen
@@ -167,7 +200,12 @@ func (w *Writer) encodeSingle(field schema.MessageField, f reflect.Value) error 
 		}
 	case schema.TypeDynamicBinary:
 		{
-			bytes := f.Bytes()
+			bytes, err := getBytes(f)
+
+			if err != nil {
+				return err
+			}
+
 			byteLen := len(bytes)
 
 			if byteLen > 65535 {
@@ -181,7 +219,12 @@ func (w *Writer) encodeSingle(field schema.MessageField, f reflect.Value) error 
 		}
 	case schema.TypeLongBinary:
 		{
-			bytes := f.Bytes()
+			bytes, err := getBytes(f)
+
+			if err != nil {
+				return err
+			}
+
 			byteLen := len(bytes)
 
 			if byteLen > 4294967295 {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"unsafe"
 
 	"github.com/benjamin-larsen/goschemaipc/schema"
 )
@@ -15,6 +16,7 @@ var ErrOptionalCorrupted = errors.New("optional count is corrupted")
 var ErrTypeCorrupted = errors.New("message type is corrupted")
 var ErrInvalidResultObject = errors.New("invalid result object (expected *struct)")
 var ErrInvalidResultPointer = errors.New("invalid result poinetr (expected struct)")
+var ErrInvalidByteKind = errors.New("invalid field kind (expected Array ([N]byte), Slice ([]byte) or string)")
 
 type Reader struct {
 	buffer       []byte
@@ -237,6 +239,46 @@ TypeUInt16
 TypeInt16
 */
 
+func setBytes(bytes []byte, v reflect.Value) error {
+	addr := unsafe.Pointer(v.UnsafeAddr())
+	kind := v.Kind()
+
+	switch kind {
+	case reflect.Array:
+		{
+			byteLen := len(bytes)
+			arrLen := v.Len()
+
+			if byteLen != arrLen {
+				return ErrWrongLen
+			}
+
+			copy(
+				unsafe.Slice((*byte)(addr), arrLen),
+				bytes,
+			)
+			break
+		}
+	case reflect.Slice:
+		{
+			// check that elem is byte too
+			*(*[]byte)(addr) = bytes
+			break
+		}
+	case reflect.String:
+		{
+			*(*string)(addr) = string(bytes)
+			break
+		}
+	default:
+		{
+			return ErrInvalidByteKind
+		}
+	}
+
+	return nil
+}
+
 // TODO: check types
 // Check IsValid and CanSet
 func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error {
@@ -254,7 +296,11 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				return nil
 			}
 
-			f.SetBytes(bytes)
+			err = setBytes(bytes, f)
+
+			if err != nil {
+				return err
+			}
 
 			break
 		}
@@ -276,7 +322,11 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				return nil
 			}
 
-			f.SetBytes(bytes)
+			err = setBytes(bytes, f)
+
+			if err != nil {
+				return err
+			}
 
 			break
 		}
@@ -298,7 +348,11 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				return nil
 			}
 
-			f.SetBytes(bytes)
+			err = setBytes(bytes, f)
+
+			if err != nil {
+				return err
+			}
 
 			break
 		}
