@@ -452,8 +452,16 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 					}
 				}
 			}
-			case schema.MessageDescriptor: {
-				itemSize := e.GetFixedSize() * uint32(arrLen)
+			case schema.SchemaMessage: {
+				desc := schema.MessageDescriptor{
+					ID:            0,
+					Message:       e,
+					OptionalCount: e.CountOptional(),
+					Internal:      false,
+					Handler:       nil,
+				}
+
+				itemSize := desc.GetFixedSize() * uint32(arrLen)
 
 				if itemSize > (r.len - r.pos) {
 					return ErrOutOfBounds
@@ -466,7 +474,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				for i := 0; i < arrLen; i++ {
 					item := slice.Index(i)
 
-					err := r.decodeStruct(e, item)
+					err := r.decodeStruct(desc, item)
 
 					if err != nil {
 						return err
