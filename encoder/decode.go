@@ -243,8 +243,8 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 	switch field.Type {
 	case schema.TypeFixedBinary:
 		{
-			len := field.Extra.(int)
-			bytes, err := r.ReadBytes(uint32(len))
+			fLen := field.Extra.(int)
+			bytes, err := r.ReadBytes(uint32(fLen))
 
 			if err != nil {
 				return err
@@ -423,7 +423,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				return err
 			}
 
-			len := int(lenU32)
+			arrLen := int(lenU32)
 
 			if !f.IsValid() {
 				// need to skip bytes here
@@ -432,17 +432,17 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 
 			switch e := field.Extra.(type) {
 			case schema.MessageField: {
-				itemSize := e.Type.GetFixedSize(e.Extra) * uint32(len)
+				itemSize := e.Type.GetFixedSize(e.Extra) * uint32(arrLen)
 
 				if itemSize > (r.len - r.pos) {
 					return ErrOutOfBounds
 				}
 
-				slice := reflect.MakeSlice(f.Type(), len, len)
+				slice := reflect.MakeSlice(f.Type(), arrLen, arrLen)
 
 				f.Set(slice)
 
-				for i := 0; i < len; i++ {
+				for i := 0; i < arrLen; i++ {
 					item := slice.Index(i)
 
 					err := r.decodeSingle(e, item)
@@ -453,17 +453,17 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				}
 			}
 			case schema.MessageDescriptor: {
-				itemSize := e.GetFixedSize() * uint32(len)
+				itemSize := e.GetFixedSize() * uint32(arrLen)
 
 				if itemSize > (r.len - r.pos) {
 					return ErrOutOfBounds
 				}
 
-				slice := reflect.MakeSlice(f.Type(), len, len)
+				slice := reflect.MakeSlice(f.Type(), arrLen, arrLen)
 
 				f.Set(slice)
 
-				for i := 0; i < len; i++ {
+				for i := 0; i < arrLen; i++ {
 					item := slice.Index(i)
 
 					err := r.decodeStruct(e, item)
