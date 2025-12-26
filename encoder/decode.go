@@ -209,14 +209,13 @@ func (r *Reader) decodeStruct(descriptor schema.MessageDescriptor, v reflect.Val
 		}
 
 		fIdx, exists := fMap[field.Name]
-		var fPtr *reflect.Value = nil
+		f := reflect.Value{}
 
 		if exists {
-			f := v.Field(fIdx)
-			fPtr = &f
+			f = v.Field(fIdx)
 		}
 
-		err := r.decodeSingle(field, fPtr)
+		err := r.decodeSingle(field, f)
 
 		if err != nil {
 			return err
@@ -240,7 +239,7 @@ TypeInt16
 
 // TODO: check types
 // Check IsValid and CanSet
-func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error {
+func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error {
 	switch field.Type {
 	case schema.TypeFixedBinary:
 		{
@@ -251,7 +250,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -273,7 +272,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -295,7 +294,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -311,7 +310,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -327,7 +326,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -343,7 +342,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -359,7 +358,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -375,7 +374,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -391,7 +390,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				return err
 			}
 
-			if f == nil {
+			if !f.IsValid() {
 				return nil
 			}
 
@@ -403,12 +402,12 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 		{
 			subFields := field.Extra.(schema.MessageDescriptor)
 
-			if f == nil {
+			if !f.IsValid() {
 				// need to skip bytes here
 				return nil
 			}
 
-			err := r.decodeStruct(subFields, *f)
+			err := r.decodeStruct(subFields, f)
 
 			if err != nil {
 				return err
@@ -426,7 +425,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 
 			len := int(lenU32)
 
-			if f == nil {
+			if !f.IsValid() {
 				// need to skip bytes here
 				return nil
 			}
@@ -446,7 +445,7 @@ func (r *Reader) decodeSingle(field schema.MessageField, f *reflect.Value) error
 				for i := 0; i < len; i++ {
 					item := slice.Index(i)
 
-					err := r.decodeSingle(e, &item)
+					err := r.decodeSingle(e, item)
 
 					if err != nil {
 						return err
