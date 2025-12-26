@@ -20,7 +20,6 @@ var ErrArrLenTooBig = errors.New("array field: length too long (must not be more
 
 type Writer struct {
 	buffer []byte
-	pos    uint32
 }
 
 func (w *Writer) GrowBytes(n uint32) (uint32, error) {
@@ -28,11 +27,15 @@ func (w *Writer) GrowBytes(n uint32) (uint32, error) {
 		return 0, ErrOutOfBounds
 	}*/
 
-	currPos := w.pos
+	currPos := uint32(len(w.buffer))
 	newPos := currPos + n
 
-	w.buffer = slices.Grow(w.buffer, int(n))[:newPos]
-	w.pos = newPos
+	w.buffer = slices.Grow(w.buffer, int(n))[0:newPos]
+
+	// initalize
+	for i := currPos; i < newPos; i++ {
+		w.buffer[i] = 0
+	}
 
 	return currPos, nil
 }
@@ -40,7 +43,6 @@ func (w *Writer) GrowBytes(n uint32) (uint32, error) {
 func Encode(descriptor schema.MessageDescriptor, res any) (bytes []byte, err error) {
 	writer := Writer{
 		buffer: make([]byte, 0, descriptor.GetFixedSize()),
-		pos:    0,
 	}
 
 	v := reflect.ValueOf(res)
