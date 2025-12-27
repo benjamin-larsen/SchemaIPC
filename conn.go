@@ -74,6 +74,13 @@ func (c *Conn) readPaylod(len uint32) ([]byte, error) {
 	return payload, nil
 }
 
+type TestX struct {
+	A []byte `ipc:"a"`
+	B []byte `ipc:"b"`
+	C int32 `ipc:"c"`
+	D uint64
+}
+
 func (c *Conn) nextMessage() error {
 	header, err := c.readHeader()
 
@@ -99,8 +106,8 @@ func (c *Conn) nextMessage() error {
 		return ErrInvalidDescriptor
 	}
 
-	if descriptor.Message.Direction == schema.OutboundMessage {
-		// Treat this as protocol violation, a proper client should never attempt to encode a Outbound Message
+	if descriptor.Message.Direction == schema.OutboundMessage || descriptor.Message.Direction == schema.ObjectDef {
+		// Treat this as protocol violation, a proper client should never attempt to encode a Outbound Message or a Object
 		fmt.Printf("Invalid Message Direction for %v\n", header.MessageType)
 		return ErrSentInvalidDirection
 	}

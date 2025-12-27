@@ -6,7 +6,7 @@ const (
 	InboundMessage MessageDirection = iota
 	OutboundMessage
 	DuplexMessage
-	ObjectMessage
+	ObjectDef
 )
 
 func (d MessageDirection) ToString() string {
@@ -17,7 +17,7 @@ func (d MessageDirection) ToString() string {
 		return "outbound"
 	case DuplexMessage:
 		return "duplex"
-	case ObjectMessage:
+	case ObjectDef:
 		return "object"
 	default:
 		return ""
