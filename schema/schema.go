@@ -77,6 +77,77 @@ var InternalSchema = Schema{
 		},
 
 		{
+			Direction: ObjectDef,
+			Name:      "messageField",
+			Fields: []MessageField{
+				{
+					Name:     "name",
+					Type:     TypeDynamicBinary,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "type",
+					Type:     TypeUInt16,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "extra",
+					Type:     TypeLongBinary,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "optional",
+					Type:     TypeUInt16,
+					Extra:    nil,
+					Optional: false,
+				},
+			},
+		},
+
+		{
+			Direction: ObjectDef,
+			Name:      "messageDescriptor",
+			Fields: []MessageField{
+				{
+					Name:     "id",
+					Type:     TypeUInt32,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "internal",
+					Type:     TypeUInt16,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "direction",
+					Type:     TypeUInt16,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "name",
+					Type:     TypeDynamicBinary,
+					Extra:    nil,
+					Optional: false,
+				},
+				{
+					Name:     "fields",
+					Type:     TypeArray,
+					Extra:    MessageField{
+						Type: TypeObject,
+						Extra: "object messageField",
+					},
+					Optional: false,
+				},
+			},
+		},
+
+		{
 			Direction: OutboundMessage,
 			Name:      "Hello",
 			Fields: []MessageField{
@@ -94,68 +165,8 @@ var InternalSchema = Schema{
 				},
 				{
 					Name: "schema",
-					Type: TypeArray,
-					Extra: SchemaMessage{
-						Fields: []MessageField{
-							{
-								Name:     "id",
-								Type:     TypeUInt32,
-								Extra:    nil,
-								Optional: false,
-							},
-							{
-								Name:     "internal",
-								Type:     TypeUInt16,
-								Extra:    nil,
-								Optional: false,
-							},
-							{
-								Name:     "direction",
-								Type:     TypeUInt16,
-								Extra:    nil,
-								Optional: false,
-							},
-							{
-								Name:     "name",
-								Type:     TypeDynamicBinary,
-								Extra:    nil,
-								Optional: false,
-							},
-							{
-								Name: "fields",
-								Type: TypeArray,
-								Extra: SchemaMessage{
-									Fields: []MessageField{
-										{
-											Name:     "name",
-											Type:     TypeDynamicBinary,
-											Extra:    nil,
-											Optional: false,
-										},
-										{
-											Name:     "type",
-											Type:     TypeUInt16,
-											Extra:    nil,
-											Optional: false,
-										},
-										{
-											Name:     "extra",
-											Type:     TypeLongBinary,
-											Extra:    nil,
-											Optional: false,
-										},
-										{
-											Name:     "optional",
-											Type:     TypeUInt16,
-											Extra:    nil,
-											Optional: false,
-										},
-									},
-								},
-								Optional: false,
-							},
-						},
-					},
+					Type: TypeLongBinary,
+					Extra: nil,
 					Optional: false,
 				},
 			},

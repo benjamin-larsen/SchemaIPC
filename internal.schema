@@ -7,6 +7,7 @@ inbound Hello {
 object messageField {
   binary REQURIED name
   uint16 REQUIRED type
+  // for array a messageField, for object the descriptor id for object, for fixed-binary the length in UInt32LE
   long_binary REQUIRED extra
   uint16 REQUIRED optional
 }
@@ -23,7 +24,7 @@ object messageDescriptor {
 outbound Hello {
   int32 REQUIRED minVersion
   int32 REQUIRED currVersion
-  array(messageDescriptor) REQUIRED schema
+  long_binary REQUIRED schema
 }
 
 outbound ProtocolError {
