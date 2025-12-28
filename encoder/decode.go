@@ -19,18 +19,18 @@ var ErrInvalidResultPointer = errors.New("invalid result poinetr (expected struc
 var ErrInvalidByteKind = errors.New("invalid field kind (expected Array ([N]byte), Slice ([]byte) or string)")
 
 type Reader struct {
-	buffer       []byte
-	descriptor   schema.MessageDescriptor
-	pos          uint32
-	len          uint32
+	buffer     []byte
+	descriptor schema.MessageDescriptor
+	pos        uint32
+	len        uint32
 }
 
 func NewReader(buffer []byte, descriptor schema.MessageDescriptor) Reader {
 	return Reader{
-		buffer:       buffer,
+		buffer:     buffer,
 		descriptor: descriptor,
-		pos:          0,
-		len: uint32(len(buffer)),
+		pos:        0,
+		len:        uint32(len(buffer)),
 	}
 }
 
