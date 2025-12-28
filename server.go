@@ -31,11 +31,19 @@ func (s *Server) Init() {
 		log.Fatal("Invalid Message Overflow Policy (must be Discard or Terminate)")
 	}
 
-	err := s.Registry.RegisterInternal()
+	err := s.Registry.RegisterOffRecord()
 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	err = s.Registry.RegisterInternal()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.registerInternal("inbound Hello", processHello)
 
 	err = s.Registry.RegisterSchema(s.Schema)
 

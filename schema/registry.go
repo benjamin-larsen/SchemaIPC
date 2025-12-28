@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type Conn interface {}
+type Conn interface{}
 
 type Reader interface {
 	// constraint: decode does not work concurrently
@@ -20,6 +20,7 @@ type MessageDescriptor struct {
 	Message       SchemaMessage
 	OptionalCount uint32
 	Internal      bool
+	OffRecord     bool
 	Handler       HandlerFunc `json:"-"`
 }
 
@@ -200,6 +201,37 @@ func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 	}
 
 	r.RegisteredUser = true
+
+	return nil
+}
+
+func (r *MessageDescriptorRegistry) RegisterOffRecord() error {
+	if r.RegisteredInternal || r.RegisteredUser {
+		return ErrAlreadyRegistered
+	}
+
+	r.ensureDescriptors()
+
+	for _, message := range InternalOffrecord.Messages {
+		id := r.idCounter
+
+		r.idCounter++
+
+		r.Descriptors[id] = MessageDescriptor{
+			ID:            id,
+			Message:       message,
+			OptionalCount: message.CountOptional(),
+			Internal:      true,
+			OffRecord:     true,
+			Handler:       nil,
+		}
+
+		err := handleSignatures(r.InternalSignatureMap, message, id)
+
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
