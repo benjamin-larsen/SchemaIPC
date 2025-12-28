@@ -335,37 +335,15 @@ func (w *Writer) encodeSingle(field schema.MessageField, f reflect.Value) error 
 
 			w.buffer = binary.LittleEndian.AppendUint16(w.buffer, uint16(arrLen))
 
-			switch e := field.Extra.(type) {
-			case schema.MessageField: {
-				for i := 0; i < arrLen; i++ {
-					item := f.Index(i)
+			e := field.Extra.(schema.MessageField)
+			for i := 0; i < arrLen; i++ {
+				item := f.Index(i)
 
-					err := w.encodeSingle(e, item)
+				err := w.encodeSingle(e, item)
 
-					if err != nil {
-						return err
-					}
+				if err != nil {
+					return err
 				}
-			}
-			case schema.SchemaMessage: {
-				desc := schema.MessageDescriptor{
-					ID:            0,
-					Message:       e,
-					OptionalCount: e.CountOptional(),
-					Internal:      false,
-					Handler:       nil,
-				}
-
-				for i := 0; i < arrLen; i++ {
-					item := f.Index(i)
-
-					err := w.encodeStruct(desc, item)
-
-					if err != nil {
-						return err
-					}
-				}
-			}
 			}
 
 			break

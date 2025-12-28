@@ -484,49 +484,25 @@ func (r *Reader) decodeSingle(field schema.MessageField, f reflect.Value) error 
 				return nil
 			}
 
-			switch e := field.Extra.(type) {
-			case schema.MessageField: {
-				itemSize := e.Type.GetFixedSize(e.Extra) * uint32(arrLen)
+			e := field.Extra.(schema.MessageField)
+			itemSize := e.Type.GetFixedSize(e.Extra) * uint32(arrLen)
 
-				if itemSize > (r.len - r.pos) {
-					return ErrOutOfBounds
-				}
-
-				slice := reflect.MakeSlice(f.Type(), arrLen, arrLen)
-
-				f.Set(slice)
-
-				for i := 0; i < arrLen; i++ {
-					item := slice.Index(i)
-
-					err := r.decodeSingle(e, item)
-
-					if err != nil {
-						return err
-					}
-				}
+			if itemSize > (r.len - r.pos) {
+				return ErrOutOfBounds
 			}
-			case schema.MessageDescriptor: {
-				itemSize := e.GetFixedSize() * uint32(arrLen)
 
-				if itemSize > (r.len - r.pos) {
-					return ErrOutOfBounds
+			slice := reflect.MakeSlice(f.Type(), arrLen, arrLen)
+
+			f.Set(slice)
+
+			for i := 0; i < arrLen; i++ {
+				item := slice.Index(i)
+
+				err := r.decodeSingle(e, item)
+
+				if err != nil {
+					return err
 				}
-
-				slice := reflect.MakeSlice(f.Type(), arrLen, arrLen)
-
-				f.Set(slice)
-
-				for i := 0; i < arrLen; i++ {
-					item := slice.Index(i)
-
-					err := r.decodeStruct(e, item)
-
-					if err != nil {
-						return err
-					}
-				}
-			}
 			}
 
 			break

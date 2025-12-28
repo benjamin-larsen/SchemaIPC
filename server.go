@@ -42,6 +42,8 @@ func (s *Server) Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	s.Registry.ResolveMessages()
 }
 
 func (s *Server) Register(signature string, handler schema.HandlerFunc) {

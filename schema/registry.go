@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type Conn interface {}
@@ -44,13 +45,15 @@ func (m MessageDescriptor) GetFixedSize() uint32 {
 	return accum
 }
 
+type SignatureMap map[string]uint32
+
 type MessageDescriptorRegistry struct {
 	idCounter            uint32
 	RegisteredUser       bool
 	RegisteredInternal   bool
 	Descriptors          map[uint32]MessageDescriptor
-	UserSignatureMap     map[string]uint32 // Maps User-defined Message Signature to Message Descriptor ID
-	InternalSignatureMap map[string]uint32 // Maps Internal Message Signature to Message Descriptor ID
+	UserSignatureMap     SignatureMap // Maps User-defined Message Signature to Message Descriptor ID
+	InternalSignatureMap SignatureMap // Maps Internal Message Signature to Message Descriptor ID
 }
 
 var ErrAlreadyRegistered = errors.New("schema is already registered")
@@ -59,12 +62,12 @@ var ErrInternalNotRegistered = errors.New("internal schema is not registered")
 func (r *MessageDescriptorRegistry) ensureDescriptors() {
 	if r.Descriptors == nil {
 		r.Descriptors = make(map[uint32]MessageDescriptor)
-		r.UserSignatureMap = make(map[string]uint32)
-		r.InternalSignatureMap = make(map[string]uint32)
+		r.UserSignatureMap = make(SignatureMap)
+		r.InternalSignatureMap = make(SignatureMap)
 	}
 }
 
-func registerSignature(signatureMap map[string]uint32, direction MessageDirection, name string, id uint32) error {
+func registerSignature(signatureMap SignatureMap, direction MessageDirection, name string, id uint32) error {
 	signature := fmt.Sprintf("%s %s", direction.ToString(), name)
 
 	_, exists := signatureMap[signature]
@@ -78,7 +81,7 @@ func registerSignature(signatureMap map[string]uint32, direction MessageDirectio
 	return nil
 }
 
-func handleSignatures(signatureMap map[string]uint32, message SchemaMessage, id uint32) error {
+func handleSignatures(signatureMap SignatureMap, message SchemaMessage, id uint32) error {
 	if message.Direction == DuplexMessage {
 		err := registerSignature(signatureMap, InboundMessage, message.Name, id)
 
@@ -102,30 +105,67 @@ func handleSignatures(signatureMap map[string]uint32, message SchemaMessage, id 
 	return nil
 }
 
-func resolveMessageFields(message *SchemaMessage) {
-	for idx, field := range message.Fields {
-		if field.Type == TypeObject || field.Type == TypeArray {
-			subMessage, ok := field.Extra.(SchemaMessage)
+func (r *MessageDescriptorRegistry) resolveMessageField(field *MessageField, internal bool) {
+	if field.Type == TypeObject {
+		signature, ok := field.Extra.(string)
 
-			if !ok {
-				if field.Type == TypeObject {
-					panic("object type must contain SchemaMessage")
-				}
-				continue
-			}
-
-			resolveMessageFields(&subMessage)
-
-			field.Extra = MessageDescriptor{
-				ID:            0,
-				Message:       subMessage,
-				OptionalCount: subMessage.CountOptional(),
-				Internal:      false,
-				Handler:       nil,
-			}
-
-			message.Fields[idx] = field
+		if !ok {
+			// already been resolved
+			return
 		}
+
+		if !strings.HasPrefix(signature, "object ") {
+			panic("object field must specify a object signature")
+		}
+
+		var signatureMap SignatureMap
+
+		if internal {
+			signatureMap = r.InternalSignatureMap
+		} else {
+			signatureMap = r.UserSignatureMap
+		}
+
+		descriptorID, exists := signatureMap[signature]
+
+		if !exists {
+			panic("object signature doesn't exist")
+		}
+
+		descriptor, exists := r.Descriptors[descriptorID]
+
+		if !exists {
+			panic("internal error: descriptor not found")
+		}
+
+		// field.Type == TypeArray
+		r.resolveMessageFields(&descriptor.Message, internal)
+
+		field.Extra = descriptor
+	} else if field.Type == TypeArray {
+		subField, ok := field.Extra.(MessageField)
+
+		if !ok {
+			// already been resolved
+			return
+		}
+
+		r.resolveMessageField(&subField, internal)
+
+		field.Extra = subField
+	}
+}
+
+func (r *MessageDescriptorRegistry) resolveMessageFields(message *SchemaMessage, internal bool) {
+	for idx, field := range message.Fields {
+		r.resolveMessageField(&field, internal)
+		message.Fields[idx] = field
+	}
+}
+
+func (r *MessageDescriptorRegistry) ResolveMessages() {
+	for _, descriptor := range r.Descriptors {
+		r.resolveMessageFields(&descriptor.Message, descriptor.Internal)
 	}
 }
 
@@ -143,8 +183,6 @@ func (r *MessageDescriptorRegistry) RegisterSchema(schema Schema) error {
 	for _, message := range schema.Messages {
 		id := r.idCounter
 		r.idCounter++
-
-		resolveMessageFields(&message)
 
 		r.Descriptors[id] = MessageDescriptor{
 			ID:            id,
@@ -176,8 +214,6 @@ func (r *MessageDescriptorRegistry) RegisterInternal() error {
 	for _, message := range InternalSchema.Messages {
 		id := r.idCounter
 		r.idCounter++
-
-		resolveMessageFields(&message)
 
 		r.Descriptors[id] = MessageDescriptor{
 			ID:            id,
