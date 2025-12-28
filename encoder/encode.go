@@ -76,6 +76,38 @@ func Encode(descriptor schema.MessageDescriptor, res any) (bytes []byte, err err
 	return slices.Clip(writer.buffer), nil
 }
 
+func EncodeField(field schema.MessageField, res any) (bytes []byte, err error) {
+	writer := Writer{
+		buffer: make([]byte, 0, field.Type.GetFixedSize(field.Extra)),
+	}
+
+	v := reflect.ValueOf(res)
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Panic Occured in Encode", r)
+
+			str, ok := r.(string)
+
+			bytes = nil
+
+			if ok {
+				err = fmt.Errorf("panic: %s", str)
+			} else {
+				err = fmt.Errorf("panic: a panic occured")
+			}
+		}
+	}()
+
+	err = writer.encodeSingle(field, v)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.Clip(writer.buffer), nil
+}
+
 func (w *Writer) SetOpt(opt uint32, offset uint32) {
 	// same as rawBitPos % 8 but optimized
 	bitPos := opt & 7
