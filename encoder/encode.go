@@ -45,11 +45,7 @@ func Encode(descriptor schema.MessageDescriptor, res any) (bytes []byte, err err
 		buffer: make([]byte, 0, descriptor.GetFixedSize()),
 	}
 
-	vPtr := reflect.ValueOf(res)
-
-	if vPtr.Kind() != reflect.Ptr {
-		return nil, ErrInvalidResultObject
-	}
+	v := reflect.ValueOf(res)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -67,7 +63,7 @@ func Encode(descriptor schema.MessageDescriptor, res any) (bytes []byte, err err
 		}
 	}()
 
-	err = writer.encodeStruct(descriptor, vPtr.Elem())
+	err = writer.encodeStruct(descriptor, v)
 
 	if err != nil {
 		return nil, err
@@ -81,11 +77,7 @@ func EncodeField(field schema.MessageField, res any) (bytes []byte, err error) {
 		buffer: make([]byte, 0, field.Type.GetFixedSize(field.Extra)),
 	}
 
-	vPtr := reflect.ValueOf(res)
-
-	if vPtr.Kind() != reflect.Ptr {
-		return nil, ErrInvalidResultObject
-	}
+	v := reflect.ValueOf(res)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -103,7 +95,7 @@ func EncodeField(field schema.MessageField, res any) (bytes []byte, err error) {
 		}
 	}()
 
-	err = writer.encodeSingle(field, vPtr.Elem())
+	err = writer.encodeSingle(field, v)
 
 	if err != nil {
 		return nil, err
@@ -185,7 +177,7 @@ func (w *Writer) encodeStruct(descriptor schema.MessageDescriptor, v reflect.Val
 }
 
 func getBytes(v reflect.Value) ([]byte, error) {
-	addr := unsafe.Pointer(v.UnsafeAddr())
+	addr := getValuePtr(&v)
 	kind := v.Kind()
 
 	switch kind {

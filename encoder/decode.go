@@ -240,7 +240,7 @@ TypeInt16
 */
 
 func setBytes(bytes []byte, v reflect.Value) error {
-	addr := unsafe.Pointer(v.UnsafeAddr())
+	addr := getValuePtr(&v)
 	kind := v.Kind()
 
 	switch kind {
