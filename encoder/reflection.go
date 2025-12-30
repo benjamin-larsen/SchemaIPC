@@ -23,6 +23,10 @@ func getValuePtr(v *reflect.Value) unsafe.Pointer {
 			panic("reflect.Value.ptr doesn't exist")
 		}
 
+		if f.Type.Kind() != reflect.UnsafePointer {
+			panic("reflect.Value.ptr isn't a unsafe.Pointer, must update code")
+		}
+
 		ptrOffset = f.Offset
 	}
 
